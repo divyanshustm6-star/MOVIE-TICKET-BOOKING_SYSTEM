@@ -12,6 +12,8 @@ import MovieDetailsPage from './pages/movies/MovieDetailsPage.jsx';
 import ShowsPage from './pages/shows/ShowsPage.jsx';
 import SeatSelectionPage from './pages/booking/SeatSelectionPage.jsx';
 import BookingConfirmationPage from './pages/booking/BookingConfirmationPage.jsx';
+import PaymentSuccessPage from './pages/booking/PaymentSuccessPage.jsx';
+import PaymentFailedPage from './pages/booking/PaymentFailedPage.jsx';
 import BookingHistoryPage from './pages/booking/BookingHistoryPage.jsx';
 import BookingDetailsPage from './pages/booking/BookingDetailsPage.jsx';
 import ProfilePage from './pages/user/ProfilePage.jsx';
@@ -54,6 +56,8 @@ export default function App() {
         <Route path="/shows" element={<ShowsPage />} />
         <Route path="/book/:showId" element={<SeatSelectionPage />} />
         <Route path="/booking/:bookingId/confirm" element={<BookingConfirmationPage />} />
+        <Route path="/payment-success" element={<PaymentSuccessPage />} />
+        <Route path="/payment-failed" element={<PaymentFailedPage />} />
         <Route path="/bookings" element={<BookingHistoryPage />} />
         <Route path="/bookings/:bookingId" element={<BookingDetailsPage />} />
         <Route path="/profile" element={<ProfilePage />} />

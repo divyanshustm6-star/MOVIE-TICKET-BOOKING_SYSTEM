@@ -24,6 +24,24 @@ export default function BookingDetailsPage() {
 
   const { booking, payments } = data;
 
+  async function downloadTicket() {
+    try {
+      const data = await paymentApi.downloadTicket(booking.id);
+      const blob = new Blob([data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ticket-${booking.bookingReference || booking.id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Failed to download ticket', e);
+      alert('Unable to download ticket');
+    }
+  }
+
   return (
     <AnimatedPage className="mx-auto grid max-w-4xl gap-6">
       <div className="panel p-6">
@@ -50,6 +68,11 @@ export default function BookingDetailsPage() {
         </div>
         {booking.bookingStatus === 'PENDING' && (
           <Link className="btn-primary mt-6" to={`/booking/${booking.id}/confirm`}>Complete payment</Link>
+        )}
+        {booking.bookingStatus !== 'PENDING' && (
+          <div className="mt-4">
+            <button className="btn-primary" onClick={downloadTicket}>Download ticket</button>
+          </div>
         )}
       </div>
       <div className="panel p-6">

@@ -30,6 +30,7 @@ public class TheaterController {
     private final TheaterService theaterService;
     private final ScreenService screenService;
     private final SeatService seatService;
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(TheaterController.class);
 
     public TheaterController(TheaterService theaterService, ScreenService screenService, SeatService seatService) {
         this.theaterService = theaterService;
@@ -101,6 +102,8 @@ public class TheaterController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")
     public SeatResponse createSeat(@Valid @RequestBody SeatRequest request) {
+        log.debug("createSeat called with screenId={}, rowLabel={}, seatNumber={}, seatType={}, status={}, price={}",
+                request.screenId(), request.rowLabel(), request.seatNumber(), request.seatType(), request.status(), request.price());
         return seatService.create(request);
     }
 

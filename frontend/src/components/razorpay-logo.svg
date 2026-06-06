@@ -1,0 +1,7 @@
+<svg width="120" height="28" viewBox="0 0 120 28" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Razorpay">
+  <rect width="120" height="28" rx="6" fill="#0A2540" />
+  <g transform="translate(10,6)">
+    <circle cx="6" cy="6" r="6" fill="#F59E0B" />
+    <text x="20" y="11" fill="#FFFFFF" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="700">Razorpay</text>
+  </g>
+</svg>

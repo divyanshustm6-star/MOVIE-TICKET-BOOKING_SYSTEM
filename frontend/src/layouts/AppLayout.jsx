@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore.js';
 import ToastHost from '../components/ToastHost.jsx';
+import BackButton from '../components/BackButton.jsx';
 
 const links = [
   { to: '/', label: 'Home' },
@@ -44,7 +45,8 @@ export default function AppLayout() {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-7xl px-4 py-8 md:py-10">
+      <main className="relative mx-auto max-w-7xl px-4 py-8 md:py-10">
+        <BackButton />
         <Outlet />
       </main>
     </div>

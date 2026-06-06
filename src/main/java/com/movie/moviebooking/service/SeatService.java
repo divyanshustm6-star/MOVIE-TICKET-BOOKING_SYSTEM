@@ -25,6 +25,9 @@ public class SeatService {
     private final ScreenService screenService;
     private final MovieShowRepository movieShowRepository;
 
+    @org.springframework.beans.factory.annotation.Value("${app.enforce-seat-prices:false}")
+    private boolean enforceSeatPrices;
+
     public SeatService(
             SeatRepository seatRepository,
             ShowSeatRepository showSeatRepository,
@@ -45,7 +48,14 @@ public class SeatService {
 
     @Transactional
     public SeatResponse create(SeatRequest request) {
-        return toResponse(seatRepository.save(apply(new Seat(), request)));
+        org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(SeatService.class);
+        log.debug("SeatService.create: incoming request.price={} for screenId={} row={} num={}", request.price(),
+                request.screenId(), request.rowLabel(), request.seatNumber());
+        Seat seat = apply(new Seat(), request);
+        log.debug("SeatService.create: before save seat.price={}", seat.getPrice());
+        Seat saved = seatRepository.save(seat);
+        log.debug("SeatService.create: after save saved.price={}", saved.getPrice());
+        return toResponse(saved);
     }
 
     @Transactional
@@ -89,6 +99,7 @@ public class SeatService {
 
         // create show seats for existing shows on this screen
         List<MovieShow> shows = movieShowRepository.findByScreenId(screenId);
+
         List<ShowSeat> createdShowSeats = new ArrayList<>();
         for (MovieShow show : shows) {
             for (Seat seat : saved) {
@@ -96,7 +107,15 @@ public class SeatService {
                     ShowSeat ss = new ShowSeat();
                     ss.setShow(show);
                     ss.setSeat(seat);
-                    ss.setPrice(seat.getPrice() == null ? java.math.BigDecimal.ZERO : seat.getPrice());
+                    if (seat.getPrice() == null) {
+                        org.slf4j.LoggerFactory.getLogger(SeatService.class).warn("SeatService.generateSeats: seat id={} has null price; setting show_seat.price=0. Enable app.enforce-seat-prices=true to fail.", seat.getId());
+                        if (enforceSeatPrices) {
+                            throw new com.movie.moviebooking.exception.BadRequestException("Missing price for seat id=" + seat.getId());
+                        }
+                        ss.setPrice(java.math.BigDecimal.ZERO);
+                    } else {
+                        ss.setPrice(seat.getPrice());
+                    }
                     ss.setSeatStatus(com.movie.moviebooking.entity.ShowSeatStatus.AVAILABLE);
                     createdShowSeats.add(ss);
                 }
@@ -117,7 +136,8 @@ public class SeatService {
     @Transactional
     public void delete(Long id) {
         List<ShowSeat> showSeats = showSeatRepository.findBySeatId(id);
-        showSeats.forEach(showSeat -> bookingSeatRepository.deleteAll(bookingSeatRepository.findByShowSeatId(showSeat.getId())));
+        showSeats.forEach(showSeat -> bookingSeatRepository.
+                deleteAll(bookingSeatRepository.findByShowSeatId(showSeat.getId())));
         showSeatRepository.deleteAll(showSeats);
         seatRepository.delete(getSeat(id));
     }

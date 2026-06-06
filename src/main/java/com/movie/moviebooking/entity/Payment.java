@@ -68,6 +68,16 @@ public class Payment {
     @Column(nullable = false, length = 3)
     private String currency = "INR";
 
+    // Razorpay fields
+    @Column(name = "razorpay_order_id")
+    private String razorpayOrderId;
+
+    @Column(name = "razorpay_payment_id")
+    private String razorpayPaymentId;
+
+    @Column(name = "razorpay_signature")
+    private String razorpaySignature;
+
     private Instant paidAt;
     private String failureReason;
     private Instant createdAt = Instant.now();

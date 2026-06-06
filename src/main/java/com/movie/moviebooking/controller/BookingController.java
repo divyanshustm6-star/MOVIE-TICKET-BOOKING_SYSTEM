@@ -23,9 +23,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/bookings")
 public class BookingController {
     private final BookingService bookingService;
+    private final com.movie.moviebooking.service.TicketService ticketService;
 
-    public BookingController(BookingService bookingService) {
+    public BookingController(BookingService bookingService, com.movie.moviebooking.service.TicketService ticketService) {
         this.bookingService = bookingService;
+        this.ticketService = ticketService;
     }
 
     @PostMapping
@@ -48,9 +50,19 @@ public class BookingController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public BookingResponse byId(@PathVariable Long id) {
-        return bookingService.findById(id);
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    public BookingResponse byId(@PathVariable Long id, java.security.Principal principal) {
+        // allow admins or the booking owner to access booking details
+        com.movie.moviebooking.entity.Booking booking = bookingService.getBooking(id);
+        String ownerEmail = booking.getUser() != null ? booking.getUser().getEmail() : null;
+        boolean isAdmin = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication()
+                .getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin) {
+            if (principal == null || ownerEmail == null || !principal.getName().equals(ownerEmail)) {
+                throw new org.springframework.security.access.AccessDeniedException("Access denied");
+            }
+        }
+        return bookingService.toResponse(booking);
     }
 
     @PutMapping("/{id}")
@@ -65,4 +77,24 @@ public class BookingController {
     public void delete(@PathVariable Long id) {
         bookingService.delete(id);
     }
+
+    @GetMapping("/{id}/ticket")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    public org.springframework.http.ResponseEntity<byte[]> downloadTicket(@PathVariable Long id, java.security.Principal principal) throws Exception {
+        com.movie.moviebooking.entity.Booking booking = bookingService.getBooking(id);
+        String ownerEmail = booking.getUser() != null ? booking.getUser().getEmail() : null;
+        boolean isAdmin = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication()
+                .getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin) {
+            if (principal == null || ownerEmail == null || !principal.getName().equals(ownerEmail)) {
+                throw new org.springframework.security.access.AccessDeniedException("Access denied");
+            }
+        }
+        byte[] pdf = ticketService.loadTicketBytes(id);
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.add(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=booking-" + booking.getBookingReference() + ".pdf");
+        headers.add(org.springframework.http.HttpHeaders.CONTENT_TYPE, "application/pdf");
+        return new org.springframework.http.ResponseEntity<>(pdf, headers, HttpStatus.OK);
+    }
 }
+

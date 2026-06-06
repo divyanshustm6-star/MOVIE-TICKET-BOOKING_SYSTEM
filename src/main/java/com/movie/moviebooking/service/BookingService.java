@@ -28,6 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class BookingService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(BookingService.class);
+
     private final BookingRepository bookingRepository;
     private final BookingSeatRepository bookingSeatRepository;
     private final ShowSeatRepository showSeatRepository;
@@ -66,11 +68,28 @@ public class BookingService {
             throw new BadRequestException("One or more selected seats are not available");
         }
 
+        // compute subtotal using show seat price; if missing, fall back to physical seat price
         BigDecimal subtotal = selectedSeats.stream()
-                .map(ShowSeat::getPrice)
+                .map(ss -> ss.getPrice() != null ? ss.getPrice() : (ss.getSeat() != null && ss.getSeat().getPrice() != null ? ss.getSeat().getPrice() : BigDecimal.ZERO))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal tax = subtotal.multiply(new BigDecimal("0.18"));
         BigDecimal total = subtotal.add(tax);
+
+        log.debug("Computed booking amounts: subtotal={}, tax={}, total={}", subtotal, tax, total);
+
+        // Prevent accidental zero-total bookings unless all selected seats truly have zero price
+        if (subtotal.compareTo(BigDecimal.ZERO) == 0) {
+            boolean allZero = selectedSeats.stream()
+                    .allMatch(ss -> {
+                        java.math.BigDecimal p1 = ss.getPrice();
+                        java.math.BigDecimal p2 = (ss.getSeat() != null ? ss.getSeat().getPrice() : null);
+                        return (p1 == null || p1.compareTo(BigDecimal.ZERO) == 0) && (p2 == null || p2.compareTo(BigDecimal.ZERO) == 0);
+                    });
+            if (!allZero) {
+                log.error("Booking subtotal computed as 0 but some underlying seat prices are non-zero or missing. showId={}, seatIds={}", request.showId(), request.showSeatIds());
+                throw new BadRequestException("Booking total is zero due to missing seat prices. Contact admin.");
+            }
+        }
 
         Booking booking = new Booking();
         booking.setBookingReference("BK-" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase());
@@ -91,7 +110,9 @@ public class BookingService {
             bookingSeat.setBooking(savedBooking);
             bookingSeat.setShow(show);
             bookingSeat.setShowSeat(showSeat);
-            bookingSeat.setSeatPrice(showSeat.getPrice());
+            // persist the effective seat price: prefer show-seat price, else fallback to seat.price
+            java.math.BigDecimal effectivePrice = showSeat.getPrice() != null ? showSeat.getPrice() : (showSeat.getSeat() != null ? showSeat.getSeat().getPrice() : java.math.BigDecimal.ZERO);
+            bookingSeat.setSeatPrice(effectivePrice);
             bookingSeatRepository.save(bookingSeat);
         });
 
@@ -150,6 +171,14 @@ public class BookingService {
 
     public Booking getBooking(Long id) {
         return bookingRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+    }
+
+    @Transactional
+    public void updateTicketPath(Long bookingId, String path) {
+        Booking booking = getBooking(bookingId);
+        booking.setTicketPath(path);
+        booking.setUpdatedAt(Instant.now());
+        bookingRepository.save(booking);
     }
 
     private User resolveBookingUser(BookingRequest request, Principal principal) {

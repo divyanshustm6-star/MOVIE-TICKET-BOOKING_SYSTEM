@@ -119,7 +119,8 @@ public final class ApiDtos {
             ScreenStatus status) {
     }
 
-    public record ScreenResponse(Long id, Long theaterId, String name, ScreenType screenType, Integer totalSeats, ScreenStatus status) {
+    public record ScreenResponse(Long id, Long theaterId, String name,
+                                 ScreenType screenType, Integer totalSeats, ScreenStatus status) {
     }
 
     public record SeatRequest(
@@ -131,7 +132,8 @@ public final class ApiDtos {
             @Positive java.math.BigDecimal price) {
     }
 
-    public record SeatResponse(Long id, Long screenId, String rowLabel, Integer seatNumber, SeatType seatType, SeatStatus status, java.math.BigDecimal price) {
+    public record SeatResponse(Long id, Long screenId, String rowLabel, Integer seatNumber,
+                               SeatType seatType, SeatStatus status, java.math.BigDecimal price) {
     }
 
     public record GenerateSeatsRequest(
@@ -215,6 +217,17 @@ public final class ApiDtos {
             @NotNull PaymentStatus paymentStatus,
             String providerTransactionId,
             String failureReason) {
+    }
+
+    public record RazorpayOrderRequest(@NotNull Long bookingId) {
+    }
+
+    public record RazorpayVerifyRequest(
+            @NotNull Long bookingId,
+            @NotBlank String razorpayOrderId,
+            @NotBlank String razorpayPaymentId,
+            @NotBlank String razorpaySignature
+    ) {
     }
 
     public record PaymentResponse(

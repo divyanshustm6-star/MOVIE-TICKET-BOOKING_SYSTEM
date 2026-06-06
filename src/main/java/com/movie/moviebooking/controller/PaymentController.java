@@ -34,6 +34,21 @@ public class PaymentController {
         return paymentService.pay(request);
     }
 
+    // Razorpay: create order
+    @PostMapping("/create-order")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    public java.util.Map<String, Object> createOrder(@Valid @RequestBody com.movie.moviebooking.dto.ApiDtos.RazorpayOrderRequest request) throws Exception {
+        return paymentService.createRazorpayOrder(request.bookingId());
+    }
+
+    // Razorpay: verify payment
+    @PostMapping("/verify")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    public java.util.Map<String, Object> verify(@Valid @RequestBody com.movie.moviebooking.dto.ApiDtos.RazorpayVerifyRequest request) throws Exception {
+        return paymentService.verifyAndCompleteRazorpayPayment(request.bookingId(), request.razorpayOrderId(), request.razorpayPaymentId(), request.razorpaySignature());
+    }
+
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public List<PaymentResponse> all() {

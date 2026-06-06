@@ -167,6 +167,9 @@ public class ShowService {
         return show;
     }
 
+    @org.springframework.beans.factory.annotation.Value("${app.enforce-seat-prices:false}")
+    private boolean enforceSeatPrices;
+
     private void createShowSeats(MovieShow show) {
         List<ShowSeat> showSeats = seatRepository.findByScreenId(show.getScreen().getId()).stream()
                 .filter(seat -> seat.getStatus() == SeatStatus.ACTIVE)
@@ -175,7 +178,15 @@ public class ShowService {
                     showSeat.setShow(show);
                     showSeat.setSeat(seat);
                     // use price from seat record (seat-based pricing)
-                    showSeat.setPrice(seat.getPrice() == null ? java.math.BigDecimal.ZERO : seat.getPrice());
+                    if (seat.getPrice() == null) {
+                        log.warn("ShowService.createShowSeats: seat id={} has null price; setting showSeat.price=0. Enable app.enforce-seat-prices=true to fail.", seat.getId());
+                        if (enforceSeatPrices) {
+                            throw new com.movie.moviebooking.exception.BadRequestException("Missing price for seat id=" + seat.getId());
+                        }
+                        showSeat.setPrice(java.math.BigDecimal.ZERO);
+                    } else {
+                        showSeat.setPrice(seat.getPrice());
+                    }
                     return showSeat;
                 })
                 .toList();

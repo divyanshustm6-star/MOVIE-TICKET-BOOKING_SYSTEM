@@ -27,6 +27,9 @@ public class ShowSeatsMigrationRunner implements ApplicationRunner {
     private final SeatRepository seatRepository;
     private final ShowSeatRepository showSeatRepository;
 
+    @org.springframework.beans.factory.annotation.Value("${app.enforce-seat-prices:false}")
+    private boolean enforceSeatPrices;
+
     public ShowSeatsMigrationRunner(
             MovieShowRepository movieShowRepository,
             SeatRepository seatRepository,
@@ -52,7 +55,15 @@ public class ShowSeatsMigrationRunner implements ApplicationRunner {
                     ss.setShow(show);
                     ss.setSeat(seat);
                     // migrate price from seat if available; otherwise fall back to 0
-                    ss.setPrice(seat.getPrice() == null ? BigDecimal.ZERO : seat.getPrice());
+                    if (seat.getPrice() == null) {
+                        log.warn("ShowSeatsMigrationRunner: seat id={} has null price; setting show_seat.price=0. Enable app.enforce-seat-prices=true to fail instead.", seat.getId());
+                        if (enforceSeatPrices) {
+                            throw new IllegalStateException("Missing price for seat id=" + seat.getId());
+                        }
+                        ss.setPrice(BigDecimal.ZERO);
+                    } else {
+                        ss.setPrice(seat.getPrice());
+                    }
                     ss.setSeatStatus(ShowSeatStatus.AVAILABLE);
                     toCreate.add(ss);
                 }

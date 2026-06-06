@@ -35,7 +35,7 @@ public class BookingSeat {
     @JoinColumn(name = "show_seat_id", nullable = false)
     private ShowSeat showSeat;
 
-    @Column(nullable = false)
+    @Column(name = "seat_price", nullable = false)
     private BigDecimal seatPrice;
 
     private Instant createdAt = Instant.now();
