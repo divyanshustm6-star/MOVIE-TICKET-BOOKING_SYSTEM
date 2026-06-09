@@ -182,15 +182,24 @@ public final class ApiDtos {
     public record BookingUpdateRequest(@NotNull BookingStatus bookingStatus) {
     }
 
-    public record BookingResponse(
+    /**
+     * Booking response used by frontend — contains readable seat numbers and avoids returning Hibernate entities.
+     * Includes commonly used fields for backward compatibility.
+     */
+    public record BookingResponseDto(
             Long id,
             String bookingReference,
             Long showId,
             String movieTitle,
+            String theaterName,
+            String screenName,
+            String posterUrl,
+            java.time.LocalDateTime startsAt,
             BookingStatus bookingStatus,
             Integer seatsCount,
+            List<String> seatNumbers,
             BigDecimal totalAmount,
-            List<ShowSeatResponse> seats) {
+            String userEmail) {
     }
 
     public record PaymentRequest(

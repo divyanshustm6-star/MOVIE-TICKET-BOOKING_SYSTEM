@@ -9,7 +9,6 @@ import { paymentApi } from '../../api/paymentApi.js';
 import { useAsync } from '../../hooks/useAsync.js';
 import { useToastStore } from '../../store/toastStore.js';
 import { formatCurrency, formatDateTime } from '../../utils/formatters.js';
-import BackButton from '../../components/BackButton.jsx';
 import RazorpayLogo from '../../components/razorpay-logo.svg';
 
 // load script helper
@@ -31,7 +30,7 @@ export default function BookingConfirmationPage() {
   const [paying, setPaying] = useState(false);
   const { data: booking, loading, error } = useAsync(() => bookingApi.get(bookingId).catch(() => bookingApi.history().then((items) => items.find((item) => String(item.id) === String(bookingId)))), [bookingId]);
 
-  const seats = booking?.seats || (booking?.seatNumbers ? booking.seatNumbers : []);
+  const seats = booking?.seatNumbers ?? (booking?.seats ? booking.seats.map(s => `${s.rowLabel}${s.seatNumber}`) : []);
   const seatCount = booking?.seatsCount || seats.length || booking?.seatCount || 1;
   const totalAmount = Number(booking?.totalAmount || 0);
   const convenience = Number(booking?.convenienceFee || booking?.convenience || 0);
@@ -96,8 +95,6 @@ export default function BookingConfirmationPage() {
 
   return (
     <AnimatedPage className="mx-auto max-w-6xl px-4 md:px-8">
-      <BackButton />
-
       <div className="grid gap-6 md:grid-cols-[1fr_420px] items-start">
         <section className="space-y-4">
           <div className="flex items-start gap-4">

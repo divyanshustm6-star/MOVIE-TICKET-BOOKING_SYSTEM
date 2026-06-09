@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
 import LoadingSkeleton from '../../components/LoadingSkeleton.jsx';
 import EmptyState from '../../components/EmptyState.jsx';
@@ -6,9 +6,24 @@ import { movieApi } from '../../api/movieApi.js';
 import { showApi } from '../../api/showApi.js';
 import { useAsync } from '../../hooks/useAsync.js';
 import { compactStatus, formatCurrency, formatDate, formatDateTime } from '../../utils/formatters.js';
+import { useAuthStore } from '../../store/authStore.js';
+import { useLoginRequiredStore } from '../../store/authModalStore.js';
 
 export default function MovieDetailsPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { token } = useAuthStore();
+  const loginRequired = useLoginRequiredStore();
+
+  const handleChooseSeats = (showId) => {
+    if (!token) {
+      loginRequired.open(() => {
+        navigate(`/book/${showId}`);
+      });
+    } else {
+      navigate(`/book/${showId}`);
+    }
+  };
   const { data, loading, error } = useAsync(async () => {
     const [movie, shows] = await Promise.all([movieApi.get(id), showApi.list({ movieId: id }).catch(() => [])]);
     return { movie, shows };
@@ -55,7 +70,13 @@ export default function MovieDetailsPage() {
                   <p className="text-lg font-black text-white">{show.theaterName} · {show.screenName}</p>
                   <p className="mt-1 text-sm text-slate-400">{formatDateTime(show.startsAt)} · {compactStatus(show.status)} · {formatCurrency(show.price)}</p>
                 </div>
-                <Link to={`/book/${show.id}`} className="btn-primary">Select seats</Link>
+                <button
+                  type="button"
+                  onClick={() => handleChooseSeats(show.id)}
+                  className="btn-primary"
+                >
+                  Select seats
+                </button>
               </div>
             ))}
           </div>

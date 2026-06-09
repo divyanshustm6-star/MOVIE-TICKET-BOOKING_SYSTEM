@@ -18,12 +18,22 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/movies")
+@RequestMapping({"/movies", "/api/movies"})
 public class MovieController {
     private final MovieService movieService;
 
     public MovieController(MovieService movieService) {
         this.movieService = movieService;
+    }
+
+    @GetMapping("/public")
+    public List<MovieResponse> publicMovies() {
+        return movieService.findAll();
+    }
+
+    @GetMapping("/public/{id}")
+    public MovieResponse publicMovieById(@PathVariable Long id) {
+        return movieService.findById(id);
     }
 
     @GetMapping

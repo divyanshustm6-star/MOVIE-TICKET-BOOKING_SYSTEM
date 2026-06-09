@@ -59,7 +59,7 @@ export default function BookingDetailsPage() {
           </div>
           <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
             <p className="text-sm text-slate-400">Seats</p>
-            <p className="mt-1 text-lg font-black text-white">{booking.seats?.map((seat) => `${seat.rowLabel}${seat.seatNumber}`).join(', ') || booking.seatsCount}</p>
+            <p className="mt-1 text-lg font-black text-white">{(booking.seatNumbers && booking.seatNumbers.length) ? booking.seatNumbers.join(', ') : (booking.seats ? booking.seats.map((seat) => `${seat.rowLabel}${seat.seatNumber}`).join(', ') : booking.seatsCount)}</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
             <p className="text-sm text-slate-400">Show ID</p>

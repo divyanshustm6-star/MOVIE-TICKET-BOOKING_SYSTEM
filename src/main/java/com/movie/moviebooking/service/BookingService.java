@@ -1,7 +1,6 @@
 package com.movie.moviebooking.service;
 
 import com.movie.moviebooking.dto.ApiDtos.BookingRequest;
-import com.movie.moviebooking.dto.ApiDtos.BookingResponse;
 import com.movie.moviebooking.dto.ApiDtos.BookingUpdateRequest;
 import com.movie.moviebooking.dto.ApiDtos.ShowSeatResponse;
 import com.movie.moviebooking.entity.Booking;
@@ -56,7 +55,7 @@ public class BookingService {
     }
 
     @Transactional
-    public BookingResponse book(BookingRequest request, Principal principal) {
+    public com.movie.moviebooking.dto.ApiDtos.BookingResponseDto book(BookingRequest request, Principal principal) {
         User user = resolveBookingUser(request, principal);
         MovieShow show = showService.getShow(request.showId());
         List<ShowSeat> selectedSeats = request.showSeatIds().stream()
@@ -120,27 +119,27 @@ public class BookingService {
     }
 
     @Transactional(readOnly = true)
-    public List<BookingResponse> history(Principal principal) {
+    public List<com.movie.moviebooking.dto.ApiDtos.BookingResponseDto> history(Principal principal) {
         if (principal == null) {
             return findAll();
         }
-        return bookingRepository.findByUserEmailOrderByBookedAtDesc(principal.getName()).stream()
+        return bookingRepository.findHistoryWithRelations(principal.getName()).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<BookingResponse> findAll() {
-        return bookingRepository.findAll().stream().map(this::toResponse).toList();
+    public List<com.movie.moviebooking.dto.ApiDtos.BookingResponseDto> findAll() {
+        return bookingRepository.findAllWithRelations().stream().map(this::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
-    public BookingResponse findById(Long id) {
+    public com.movie.moviebooking.dto.ApiDtos.BookingResponseDto findById(Long id) {
         return toResponse(getBooking(id));
     }
 
     @Transactional
-    public BookingResponse update(Long id, BookingUpdateRequest request) {
+    public com.movie.moviebooking.dto.ApiDtos.BookingResponseDto update(Long id, BookingUpdateRequest request) {
         Booking booking = getBooking(id);
         booking.setBookingStatus(request.bookingStatus());
         booking.setUpdatedAt(Instant.now());
@@ -170,7 +169,16 @@ public class BookingService {
     }
 
     public Booking getBooking(Long id) {
-        return bookingRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+        log.info("[Booking Service] Retrieving booking by ID: {}", id);
+        Booking booking = bookingRepository.findByIdWithRelations(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+        if (booking.getUser() != null) {
+            log.info("[Booking Service] Booking retrieved successfully. User Email: {}, User Name: {}", 
+                     booking.getUser().getEmail(), booking.getUser().getFullName());
+        } else {
+            log.warn("[Booking Service] Booking retrieved successfully but User is NULL!");
+        }
+        return booking;
     }
 
     @Transactional
@@ -192,19 +200,62 @@ public class BookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
-    public BookingResponse toResponse(Booking booking) {
-        List<ShowSeatResponse> seats = bookingSeatRepository.findByBookingId(booking.getId()).stream()
-                .map(BookingSeat::getShowSeat)
-                .map(showService::toSeatResponse)
-                .toList();
-        return new BookingResponse(
-                booking.getId(),
-                booking.getBookingReference(),
-                booking.getShow().getId(),
-                booking.getShow().getMovie().getTitle(),
-                booking.getBookingStatus(),
-                booking.getSeatsCount(),
-                booking.getTotalAmount(),
-                seats);
+    public com.movie.moviebooking.dto.ApiDtos.BookingResponseDto toResponse(Booking booking) {
+        try {
+            // map seats to human-readable seat labels like A1
+            List<String> seatNumbers = bookingSeatRepository.findByBookingId(booking.getId()).stream()
+                    .map(BookingSeat::getShowSeat)
+                    .map(ss -> {
+                        // ss.getSeat() may be lazy but this method is always used inside @Transactional methods
+                        if (ss == null) return "";
+                        if (ss.getSeat() != null) {
+                            return ss.getSeat().getRowLabel() + ss.getSeat().getSeatNumber();
+                        }
+                        // No Seat linked: fallback to using showSeat id label to avoid NPE and provide traceable value
+                        return "showSeat-" + ss.getId();
+                    })
+                    .filter(s -> s != null && !s.isBlank())
+                    .toList();
+
+            String theaterName = null;
+            String screenName = null;
+            java.time.LocalDateTime startsAt = null;
+            Long showId = null;
+            String posterUrl = null;
+            if (booking.getShow() != null) {
+                MovieShow s = booking.getShow();
+                showId = s.getId();
+                startsAt = s.getStartsAt();
+                if (s.getScreen() != null) {
+                    screenName = s.getScreen().getName();
+                    if (s.getScreen().getTheater() != null) theaterName = s.getScreen().getTheater().getName();
+                }
+                if (s.getMovie() != null) {
+                    posterUrl = s.getMovie().getPosterUrl();
+                }
+            }
+
+            String userEmail = booking.getUser() != null ? booking.getUser().getEmail() : null;
+
+            return new com.movie.moviebooking.dto.ApiDtos.BookingResponseDto(
+                    booking.getId(),
+                    booking.getBookingReference(),
+                    showId,
+                    booking.getShow() != null && booking.getShow().getMovie() != null ? booking.getShow().getMovie().getTitle() : null,
+                    theaterName,
+                    screenName,
+                    posterUrl,
+                    startsAt,
+                    booking.getBookingStatus(),
+                    booking.getSeatsCount(),
+                    seatNumbers,
+                    booking.getTotalAmount(),
+                    userEmail
+            );
+        } catch (Exception e) {
+            // log full stack trace so Spring console shows root cause
+            e.printStackTrace();
+            throw e;
+        }
     }
 }

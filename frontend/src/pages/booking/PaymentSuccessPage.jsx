@@ -86,7 +86,7 @@ export default function PaymentSuccessPage() {
 
               <div className="mt-3 grid gap-2 text-sm text-slate-300">
                 <div className="flex justify-between"><span>Movie</span><span className="text-white">{latest.movieTitle}</span></div>
-                <div className="flex justify-between"><span>Seats</span><span className="text-white">{latest.seats?.map((s) => `${s.rowLabel}${s.seatNumber}`).join(', ') || latest.seatLabels || 'N/A'}</span></div>
+                <div className="flex justify-between"><span>Seats</span><span className="text-white">{(latest.seatNumbers && latest.seatNumbers.length) ? latest.seatNumbers.join(', ') : (latest.seats?.map((s) => `${s.rowLabel}${s.seatNumber}`).join(', ') || latest.seatLabels || 'N/A')}</span></div>
                 <div className="flex justify-between"><span>Amount Paid</span><span className="text-white">{formatCurrency(latest.totalAmount)}</span></div>
               </div>
             </div>

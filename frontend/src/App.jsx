@@ -43,39 +43,38 @@ export default function App() {
         <Route path="/register" element={token && bootstrapped ? <Navigate to="/" replace /> : <RegisterPage />} />
       </Route>
 
-      <Route
-        element={
-          <ProtectedRoute roles={[roles.user, roles.admin]}>
-            <AppLayout />
-          </ProtectedRoute>
-        }
-      >
+      <Route element={<AppLayout />}>
+        {/* Public Routes */}
         <Route index element={<HomePage />} />
         <Route path="/movies" element={<MoviesPage />} />
         <Route path="/movies/:id" element={<MovieDetailsPage />} />
         <Route path="/shows" element={<ShowsPage />} />
-        <Route path="/book/:showId" element={<SeatSelectionPage />} />
-        <Route path="/booking/:bookingId/confirm" element={<BookingConfirmationPage />} />
-        <Route path="/payment-success" element={<PaymentSuccessPage />} />
-        <Route path="/payment-failed" element={<PaymentFailedPage />} />
-        <Route path="/bookings" element={<BookingHistoryPage />} />
-        <Route path="/bookings/:bookingId" element={<BookingDetailsPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
 
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute roles={[roles.admin]}>
-              <AdminLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<AdminDashboardPage />} />
-          <Route path="movies" element={<AdminMoviesPage />} />
-          <Route path="shows" element={<AdminShowsPage />} />
-          <Route path="bookings" element={<AdminBookingsPage />} />
-          <Route path="users" element={<AdminUsersPage />} />
-          <Route path="theaters" element={<AdminTheatersPage />} />
+        {/* Protected Routes */}
+        <Route element={<ProtectedRoute roles={[roles.user, roles.admin]} />}>
+          <Route path="/book/:showId" element={<SeatSelectionPage />} />
+          <Route path="/booking/:bookingId/confirm" element={<BookingConfirmationPage />} />
+          <Route path="/payment-success" element={<PaymentSuccessPage />} />
+          <Route path="/payment-failed" element={<PaymentFailedPage />} />
+          <Route path="/bookings" element={<BookingHistoryPage />} />
+          <Route path="/bookings/:bookingId" element={<BookingDetailsPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute roles={[roles.admin]}>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<AdminDashboardPage />} />
+            <Route path="movies" element={<AdminMoviesPage />} />
+            <Route path="shows" element={<AdminShowsPage />} />
+            <Route path="bookings" element={<AdminBookingsPage />} />
+            <Route path="users" element={<AdminUsersPage />} />
+            <Route path="theaters" element={<AdminTheatersPage />} />
+          </Route>
         </Route>
       </Route>
 

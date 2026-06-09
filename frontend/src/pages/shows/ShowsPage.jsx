@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
 import EmptyState from '../../components/EmptyState.jsx';
 import LoadingSkeleton from '../../components/LoadingSkeleton.jsx';
@@ -7,9 +7,25 @@ import PageHeader from '../../components/PageHeader.jsx';
 import { showApi } from '../../api/showApi.js';
 import { useAsync } from '../../hooks/useAsync.js';
 import { compactStatus, formatCurrency, formatDateTime } from '../../utils/formatters.js';
+import { useAuthStore } from '../../store/authStore.js';
+import { useLoginRequiredStore } from '../../store/authModalStore.js';
 
 export default function ShowsPage() {
   const [date, setDate] = useState('');
+  const navigate = useNavigate();
+  const { token } = useAuthStore();
+  const loginRequired = useLoginRequiredStore();
+
+  const handleChooseSeats = (showId) => {
+    if (!token) {
+      loginRequired.open(() => {
+        navigate(`/book/${showId}`);
+      });
+    } else {
+      navigate(`/book/${showId}`);
+    }
+  };
+
   const { data: showsRaw, loading, error, reload } = useAsync(() => showApi.list(date ? { date } : {}), [date]);
   const shows = showsRaw ?? [];
 
@@ -34,7 +50,13 @@ export default function ShowsPage() {
                 <span className="badge">{formatCurrency(show?.price ?? 0)}</span>
               </div>
             </div>
-            <Link to={`/book/${show?.id}`} className="btn-primary">Choose seats</Link>
+            <button
+              type="button"
+              onClick={() => handleChooseSeats(show?.id)}
+              className="btn-primary"
+            >
+              Choose seats
+            </button>
           </div>
         ))}
       </div>

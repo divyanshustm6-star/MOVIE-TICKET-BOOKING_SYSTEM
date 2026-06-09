@@ -1,4 +1,4 @@
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore.js';
 
 export default function ProtectedRoute({ children, roles }) {
@@ -17,5 +17,5 @@ export default function ProtectedRoute({ children, roles }) {
     return <Navigate to="/403" replace />;
   }
 
-  return children;
+  return children ? children : <Outlet />;
 }

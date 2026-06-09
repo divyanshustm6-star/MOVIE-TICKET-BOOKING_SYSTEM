@@ -1,7 +1,7 @@
 package com.movie.moviebooking.controller;
 
 import com.movie.moviebooking.dto.ApiDtos.BookingRequest;
-import com.movie.moviebooking.dto.ApiDtos.BookingResponse;
+import com.movie.moviebooking.dto.ApiDtos.BookingResponseDto;
 import com.movie.moviebooking.dto.ApiDtos.BookingUpdateRequest;
 import com.movie.moviebooking.service.BookingService;
 import jakarta.validation.Valid;
@@ -33,41 +33,47 @@ public class BookingController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    public BookingResponse book(@Valid @RequestBody BookingRequest request, Principal principal) {
+    public BookingResponseDto book(@Valid @RequestBody BookingRequest request, Principal principal) {
         return bookingService.book(request, principal);
     }
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public List<BookingResponse> all() {
+    public List<BookingResponseDto> all() {
         return bookingService.findAll();
     }
 
     @GetMapping("/history")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    public List<BookingResponse> history(Principal principal) {
+    public List<BookingResponseDto> history(Principal principal) {
         return bookingService.history(principal);
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
-    public BookingResponse byId(@PathVariable Long id, java.security.Principal principal) {
-        // allow admins or the booking owner to access booking details
-        com.movie.moviebooking.entity.Booking booking = bookingService.getBooking(id);
-        String ownerEmail = booking.getUser() != null ? booking.getUser().getEmail() : null;
-        boolean isAdmin = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication()
-                .getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        if (!isAdmin) {
-            if (principal == null || ownerEmail == null || !principal.getName().equals(ownerEmail)) {
-                throw new org.springframework.security.access.AccessDeniedException("Access denied");
+    public BookingResponseDto byId(@PathVariable Long id, java.security.Principal principal) {
+        try {
+            // fetch DTO with required fields (method is transactional and returns DTO)
+            com.movie.moviebooking.dto.ApiDtos.BookingResponseDto dto = bookingService.findById(id);
+            String ownerEmail = dto.userEmail();
+            boolean isAdmin = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication()
+                    .getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+            if (!isAdmin) {
+                if (principal == null || ownerEmail == null || !principal.getName().equals(ownerEmail)) {
+                    throw new org.springframework.security.access.AccessDeniedException("Access denied");
+                }
             }
+            return dto;
+        } catch (Exception e) {
+            // surface stack trace in Spring console for debugging
+            e.printStackTrace();
+            throw e;
         }
-        return bookingService.toResponse(booking);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public BookingResponse update(@PathVariable Long id, @Valid @RequestBody BookingUpdateRequest request) {
+    public BookingResponseDto update(@PathVariable Long id, @Valid @RequestBody BookingUpdateRequest request) {
         return bookingService.update(id, request);
     }
 
@@ -81,20 +87,25 @@ public class BookingController {
     @GetMapping("/{id}/ticket")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     public org.springframework.http.ResponseEntity<byte[]> downloadTicket(@PathVariable Long id, java.security.Principal principal) throws Exception {
-        com.movie.moviebooking.entity.Booking booking = bookingService.getBooking(id);
-        String ownerEmail = booking.getUser() != null ? booking.getUser().getEmail() : null;
-        boolean isAdmin = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication()
-                .getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        if (!isAdmin) {
-            if (principal == null || ownerEmail == null || !principal.getName().equals(ownerEmail)) {
-                throw new org.springframework.security.access.AccessDeniedException("Access denied");
+        try {
+            com.movie.moviebooking.dto.ApiDtos.BookingResponseDto dto = bookingService.findById(id);
+            String ownerEmail = dto.userEmail();
+            boolean isAdmin = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication()
+                    .getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+            if (!isAdmin) {
+                if (principal == null || ownerEmail == null || !principal.getName().equals(ownerEmail)) {
+                    throw new org.springframework.security.access.AccessDeniedException("Access denied");
+                }
             }
+            byte[] pdf = ticketService.loadTicketBytes(id);
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.add(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=booking-" + id + ".pdf");
+            headers.add(org.springframework.http.HttpHeaders.CONTENT_TYPE, "application/pdf");
+            return new org.springframework.http.ResponseEntity<>(pdf, headers, HttpStatus.OK);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
         }
-        byte[] pdf = ticketService.loadTicketBytes(id);
-        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-        headers.add(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=booking-" + booking.getBookingReference() + ".pdf");
-        headers.add(org.springframework.http.HttpHeaders.CONTENT_TYPE, "application/pdf");
-        return new org.springframework.http.ResponseEntity<>(pdf, headers, HttpStatus.OK);
     }
 }
 

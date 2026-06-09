@@ -13,7 +13,7 @@ export default function MoviesPage() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('');
   const [language, setLanguage] = useState('');
-  const { data: movies = [], loading, error } = useAsync(() => movieApi.list(), []);
+  const { data: movies = [], loading, error } = useAsync(() => movieApi.publicList(), []);
 
   const languages = useMemo(() => uniqueValues(movies || [], 'language'), [movies]);
   const filtered = useMemo(() => (movies || []).filter((movie) => {
@@ -25,7 +25,7 @@ export default function MoviesPage() {
 
   return (
     <AnimatedPage className="grid gap-8">
-      <PageHeader title="Movie catalog" eyebrow="Browse" description="Search and filter the backend movie catalog. Movie reads require a USER or ADMIN token." />
+      <PageHeader title="Movie catalog" eyebrow="Browse" description="Search and filter the backend movie catalog." />
       <div className="panel grid gap-4 p-4 md:grid-cols-[1fr_220px_220px]">
         <input className="field" placeholder="Search title, genre, description..." value={query} onChange={(e) => setQuery(e.target.value)} />
         <select className="field" value={status} onChange={(e) => setStatus(e.target.value)}>
