@@ -1,13 +1,19 @@
-# Stage 1: Build the Spring Boot application using Maven
-FROM maven:3.9-eclipse-temurin-17 AS build
+# Stage 1: Build the Spring Boot application using Maven Wrapper
+FROM eclipse-temurin:17-jdk-alpine AS build
 WORKDIR /app
 
-# Copy the source code and configuration files
-COPY pom.xml .
+# Copy the maven wrapper files and project configuration
+COPY .mvn/ .mvn
+COPY mvnw pom.xml ./
+
+# Fix line endings for linux execution and ensure execution permissions
+RUN tr -d '\r' < mvnw > mvnw.linux && mv mvnw.linux mvnw && chmod +x mvnw
+
+# Copy the source code
 COPY src ./src
 
-# Build the application and skip tests to speed up the process
-RUN mvn clean package -DskipTests
+# Build the application using the wrapper
+RUN ./mvnw clean package -DskipTests
 
 # Stage 2: Create the runtime image
 FROM eclipse-temurin:17-jre-alpine
